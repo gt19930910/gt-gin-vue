@@ -14,7 +14,7 @@ import (
 // 注册信息
 type RegistInfo struct {
 	// 手机号
-	Phone string `json:"mobile"`
+	UserName string `json:"username"`
 	// 密码
 	Pwd string `json:"pwd"`
 }
@@ -23,7 +23,7 @@ type RegistInfo struct {
 func RegisterUser(c *gin.Context) {
 	var registerInfo RegistInfo
 	if c.BindJSON(&registerInfo) == nil {
-		err := model.Register(registerInfo.Phone, registerInfo.Pwd)
+		err := model.Register(registerInfo.UserName, registerInfo.Pwd)
 		if err == nil {
 			c.JSON(http.StatusOK, gin.H{
 				"status": 0,
@@ -77,8 +77,7 @@ func generateToken(c *gin.Context, user model.User) {
 	}
 	claims := myjwt.CustomClaims{
 		user.Id,
-		user.Name,
-		user.Phone,
+		user.Username,
 		jwtgo.StandardClaims{
 			NotBefore: int64(time.Now().Unix() - 1000), // 签名生效时间
 			ExpiresAt: int64(time.Now().Unix() + 3600), // 过期时间 一小时
