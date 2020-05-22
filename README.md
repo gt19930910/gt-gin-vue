@@ -8,4 +8,3 @@ GET    /user/resetpwd   重置用户密码  curl http://host:port/user/resetpwd 
 POST   /user/delete     删除用户		 curl http://host:port/user/delete -H "token:abc" -d "name=gt"
 POST   /user/update     更新用户信息  curl http://host:port/user/test -H "token:abc" -d "name=gt&pwd=123" 
 
-
