@@ -13,6 +13,7 @@ import (
 // JWTAuth 中间件，检查token
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// curl http://219.83.160.146:8080/data/dataByTime -H "token:..."
 		token := c.Request.Header.Get("token")
 		if token == "" {
 			c.JSON(http.StatusOK, gin.H{
@@ -60,14 +61,13 @@ var (
 	TokenNotValidYet error  = errors.New("Token not active yet")
 	TokenMalformed   error  = errors.New("That's not even a token")
 	TokenInvalid     error  = errors.New("Couldn't handle this token:")
-	SignKey          string = "newtrekWang"
+	SignKey          string = "GaoTaoLearn"
 )
 
 // 载荷，可以加一些自己需要的信息
 type CustomClaims struct {
-	ID    string `json:"userId"`
-	Name  string `json:"name"`
-	Phone string `json:"phone"`
+	Id    uint `json:"userid"`
+	Username  string `json:"username"`
 	jwt.StandardClaims
 }
 

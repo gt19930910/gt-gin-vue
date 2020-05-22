@@ -1,66 +1,113 @@
 package model
 
 import (
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/jinzhu/gorm"
 
-	// "fmt"
-	// "log"
+	"errors"
+	"log"
 )
 
-const (
-	dbName     = "myBlog.db"
-	userBucket = "user"
+var (
+	db *gorm.DB
+	db_err error
 )
 
-// User 用户类
+// User 用户类 在数据库中表名默认会加上s，所有的字段名都会自动匹配起来，只是大写都变成了小写
+// 可以自己在后面改名称用`gorm:"column:username"`如果列名称已经定了就不能插入了
 type User struct {
-	Id         string `json:"userId"`
-	Name       string `json:"userName"`
-	Gender     string `json:"gender"`
-	Phone      string `json:"userMobile"`
-	Pwd        string `json:"pwd"`
-	Permission string `json:"permission"`
+	Id 	     uint `gorm:"column:id; primary_key"`
+	Username string `gorm:"column:username"` 
+	Password string `gorm:"column:password"`
 }
 
 // LoginReq 登录请求参数类
 type LoginReq struct {
-	Phone string `json:"mobile"`
+	Name string `json:"name"`
 	Pwd   string `json:"pwd"`
 }
 
-// Register 插入用户，先检查是否存在用户，如果没有则存入
-func Register(phone string, pwd string) error {
+func OpenMysql() (*gorm.DB, error) {
+	db, db_err = gorm.Open("mysql", "gt:abc123@(127.0.0.1:3306)/gt_gin_vue?charset=utf8&parseTime=True&loc=Local")
+	if db_err != nil {
+		return nil, db_err
+	}
+	db.LogMode(true)//开启sql debug 模式
+	return db, nil
+}
+
+func Add(user *User) error {
+	
+	if err := db.Create(user).Error; err != nil {
+		log.Fatal("插入失败:", err)
+		return err
+	}
 
 	return nil
 }
 
-// CheckUser 检查用户是否存在
-func CheckUser(phone string) bool {
+// Register 插入用户，先检查是否存在用户，如果没有则存入
+func Register(username string, pwd string) error {
+	if CheckUser(username) {
+		return errors.New("用户已存在！")
+	}
+	user := &User {
+		Username:username,
+		Password:pwd,
+	}
+	return Add(user);
+}
 
-	return false
+// CheckUser 检查用户是否存在
+func CheckUser(username string) bool {
+
+	ret := db.Where("username = ?", username).First(&User{}).RecordNotFound()
+	if ret == true {
+		return false
+	}
+	return true
+}
+
+func Delete(username string, id uint) error {
+
+	if !CheckUser(username) {
+		return errors.New("该用户不存在")
+	}
+	// 删除表中所有的数据
+	// u := User {}
+	// db.Delete(&u)
+	u := User {
+		Username:username, 
+		Id:id,
+	}
+	err := db.Delete(&u).Error
+	return err
+}
+
+func Update(updateUser User) (User, error) {
+
+	//根据前面的user的主键不变，修改成后面user里面的字段
+	err := db.Model(&updateUser).Updates(&updateUser).Error
+	return updateUser, err
 }
 
 // LoginCheck 登录验证
 func LoginCheck(loginReq LoginReq) (bool, User, error) {
-	var a User
-	return false, a, nil
-}
-
-// EditUserReq 更新用户信息数据类
-type EditUserReq struct {
-	UserId     string `json:"userId"`
-	UserName   string `json:"userName"`
-	UserGender string `json:"gender"`
-}
-
-// UpdateUser 更新用户信息
-func UpdateUser(editUser EditUserReq) (User, error) {
-	
-	var a User
-	return a, nil
+	user := User {}
+	ret := db.Where("username = ?", loginReq.Name).First(&user).RecordNotFound()
+	if ret == true {
+		return false, user, errors.New("用户名未注册")
+	}
+	if user.Password != loginReq.Pwd {
+		return false, user, errors.New("密码错误")
+	}
+	return true, user, nil
 }
 
 //ResetPwd 重置密码
-func ResetPwd(mobile string, pwd string) error {
+func ResetPwd(id uint) error {
 
-	return nil
+	user := User {Id:id}
+	err := db.Model(&user).Update("password", "123").Error
+	return err
 }

@@ -13,9 +13,7 @@ import (
 
 // 注册信息
 type RegistInfo struct {
-	// 手机号
-	Phone string `json:"mobile"`
-	// 密码
+	UserName string `json:"username"`
 	Pwd string `json:"pwd"`
 }
 
@@ -23,7 +21,7 @@ type RegistInfo struct {
 func RegisterUser(c *gin.Context) {
 	var registerInfo RegistInfo
 	if c.BindJSON(&registerInfo) == nil {
-		err := model.Register(registerInfo.Phone, registerInfo.Pwd)
+		err := model.Register(registerInfo.UserName, registerInfo.Pwd)
 		if err == nil {
 			c.JSON(http.StatusOK, gin.H{
 				"status": 0,
@@ -32,7 +30,7 @@ func RegisterUser(c *gin.Context) {
 		} else {
 			c.JSON(http.StatusOK, gin.H{
 				"status": -1,
-				"msg":    "注册失败" + err.Error(),
+				"msg":    "注册失败:" + err.Error(),
 			})
 		}
 	} else {
@@ -73,16 +71,15 @@ func Login(c *gin.Context) {
 // 生成令牌
 func generateToken(c *gin.Context, user model.User) {
 	j := &myjwt.JWT{
-		[]byte("newtrekWang"),
+		[]byte("GaoTaoLearn"),
 	}
 	claims := myjwt.CustomClaims{
 		user.Id,
-		user.Name,
-		user.Phone,
+		user.Username,
 		jwtgo.StandardClaims{
 			NotBefore: int64(time.Now().Unix() - 1000), // 签名生效时间
 			ExpiresAt: int64(time.Now().Unix() + 3600), // 过期时间 一小时
-			Issuer:    "newtrekWang",                   //签名的发行者
+			Issuer:    "GaoTaoLearn",                   //签名的发行者
 		},
 	}
 
@@ -110,8 +107,10 @@ func generateToken(c *gin.Context, user model.User) {
 	return
 }
 
-// GetDataByTime 一个需要token认证的测试接口
-func GetDataByTime(c *gin.Context) {
+//下面的函数若要有权限问题需要再加中间件
+
+func TestToken(c *gin.Context) {
+	//若要加admin权限，需要解析claims
 	claims := c.MustGet("claims").(*myjwt.CustomClaims)
 	if claims != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -120,4 +119,87 @@ func GetDataByTime(c *gin.Context) {
 			"data":   claims,
 		})
 	}
+}
+
+func DeleteUser(c *gin.Context) {
+	//若要加admin权限，需要解析claims
+	claims := c.MustGet("claims").(*myjwt.CustomClaims)
+
+	name := c.PostForm("name")
+	if name == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"status": -1,
+			"msg":    "未传递用户名",
+		})
+		return
+	}
+	err := model.Delete(name, claims.Id)
+
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"status": -1,
+			"msg":    "删除用户失败 " + err.Error(),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 0,
+		"msg":    "成功删除用户 " + name,
+	})
+}
+
+func InfoUsers(c *gin.Context) {
+	//若要加admin权限，需要解析claims
+	//claims := c.MustGet("claims").(*myjwt.CustomClaims)
+}
+
+func UpdateUser(c *gin.Context) {
+	//若要加admin权限，需要解析claims
+	claims := c.MustGet("claims").(*myjwt.CustomClaims)
+	name := c.PostForm("name")
+	pwd  := c.PostForm("pwd")
+	if name == "" && pwd == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"status": -1,
+			"msg":    "无任何修改参数",
+		})
+	} 
+	user := model.User {
+		Id:claims.Id,
+		Password: pwd,
+		Username: name,
+	}
+	retUser, err := model.Update(user)
+
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"status": -1,
+			"msg":    "更新用户数据失败 " + err.Error(),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 0,
+		"msg":    "更新用户数据成功 ",
+		"data": retUser,
+	})
+}
+
+func ResetPassword(c *gin.Context) {
+	//若要加admin权限，需要解析claims
+	claims := c.MustGet("claims").(*myjwt.CustomClaims)
+
+	err := model.ResetPwd(claims.Id)
+
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"status": -1,
+			"msg":    "重置密码失败 " + err.Error(),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": 0,
+		"msg":    "重置密码为123",
+	})
 }
