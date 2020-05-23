@@ -16,7 +16,7 @@ var (
 // User 用户类 在数据库中表名默认会加上s，所有的字段名都会自动匹配起来，只是大写都变成了小写
 // 可以自己在后面改名称用`gorm:"column:username"`如果列名称已经定了就不能插入了
 type User struct {
-	Id 	     uint `gorm:"column:id; primary_key"`
+	Id 	     uint `gorm:"column:id; primary_key; AUTO_INCREMENT"`
 	Username string `gorm:"column:username"` 
 	Password string `gorm:"column:password"`
 }
@@ -28,13 +28,19 @@ type LoginReq struct {
 }
 
 func OpenMysql() (*gorm.DB, error) {
-	db, db_err = gorm.Open("mysql", "gt:abc123@(127.0.0.1:3306)/gt_gin_vue?charset=utf8&parseTime=True&loc=Local")
+	db, db_err = gorm.Open("mysql", "gt:123@(127.0.0.1:3306)/dbtest?charset=utf8&parseTime=True&loc=Local")
 	if db_err != nil {
 		return nil, db_err
 	}
 	db.LogMode(true)//开启sql debug 模式
+
+	ret := db.HasTable(&User{})
+	if ret == false {
+		db.CreateTable(&User{})//初始化一个空的表
+	}
 	return db, nil
 }
+
 
 func Add(user *User) error {
 	
